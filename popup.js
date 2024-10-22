@@ -1,13 +1,14 @@
-// Initialize pet stats
 let petStats = {
   health: 100,
   hunger: 0,
   happiness: 100,
-  energy: 100,       // New energy stat
-  cleanliness: 100,  // New cleanliness stat
-  coins: 0,          // New coins stat
-  stage: 1           // Evolution stage
+  energy: 100, 
+  cleanliness: 100,
+  coins: 0,
+  stage: 1
 };
+
+let activeEffects = [];
 
 function sanitizePetStats(petStats) {
   return {
@@ -22,7 +23,6 @@ function sanitizePetStats(petStats) {
 }
 
 
-// Load saved stats from storage
 document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.sync.get(['petStats'], (result) => {
     petStats = {
@@ -33,16 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
       cleanliness: 100,
       coins: 0,
       stage: 1,
-      ...result.petStats // Merge stored stats
+      ...result.petStats
     };
 
-    // Sanitize petStats
     petStats = sanitizePetStats(petStats);
 
     updateStatsDisplay();
   });
 
-  // Attach event listeners to buttons
   document.getElementById('feed-button').addEventListener('click', feedPet);
   document.getElementById('play-button').addEventListener('click', playWithPet);
   document.getElementById('clean-button').addEventListener('click', cleanPet);
@@ -55,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('shop-button').addEventListener('click', openShop);
 });
 
-// Listen for changes in storage and update the display accordingly
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (changes.petStats) {
     petStats = changes.petStats.newValue;
@@ -63,7 +60,6 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
-// Functions to update the display
 function updateStatsDisplay() {
   document.getElementById('health').textContent = petStats.health;
   document.getElementById('hunger').textContent = petStats.hunger;
@@ -74,7 +70,6 @@ function updateStatsDisplay() {
   updatePetImage();
 }
 
-// Save stats to storage
 function saveStats() {
   petStats = sanitizePetStats(petStats);
   chrome.storage.sync.set({ petStats }, () => {
@@ -84,8 +79,6 @@ function saveStats() {
   });
 }
 
-
-// Update pet image based on stats and stage
 function updatePetImage() {
   const petImage = document.getElementById('pet-image');
   let imageSrc = '';
@@ -97,7 +90,6 @@ function updatePetImage() {
   } else if (petStats.happiness <= 20) {
     imageSrc = 'images/sad.gif';
   } else {
-    // Change image based on stage
     switch (petStats.stage) {
       case 1:
         imageSrc = 'images/happy.gif';
@@ -116,11 +108,10 @@ function updatePetImage() {
   petImage.src = imageSrc;
 }
 
-// Interaction functions
 function feedPet() {
   petStats.hunger = Math.max(0, petStats.hunger - 20);
   petStats.health = Math.min(100, petStats.health + 5);
-  earnCoins(2); // Earn coins when feeding
+  earnCoins(2);
   playSound('feed');
   saveStats();
   updateStatsDisplay();
@@ -129,7 +120,7 @@ function feedPet() {
 function playWithPet() {
   petStats.happiness = Math.min(100, petStats.happiness + 20);
   petStats.hunger = Math.min(100, petStats.hunger + 10);
-  earnCoins(5); // Earn coins when playing
+  earnCoins(5);
   playSound('play');
   saveStats();
   updateStatsDisplay();
@@ -138,7 +129,7 @@ function playWithPet() {
 function cleanPet() {
   petStats.cleanliness = Math.min(100, petStats.cleanliness + 10);
   petStats.happiness = Math.max(0, petStats.happiness - 5);
-  earnCoins(3); // Earn coins when cleaning
+  earnCoins(3);
   playSound('clean');
   saveStats();
   updateStatsDisplay();
@@ -146,15 +137,14 @@ function cleanPet() {
 
 function putPetToSleep() {
   petStats.energy = Math.min(100, petStats.energy + 50);
-  petStats.hunger = Math.min(100, petStats.hunger + 10); // Pet gets hungrier after sleep
-  playSound('sleep');
+  petStats.hunger = Math.min(100, petStats.hunger + 10);
   saveStats();
   updateStatsDisplay();
 }
 
 function givePetABath() {
   petStats.cleanliness = 100;
-  petStats.happiness = Math.max(0, petStats.happiness - 5); // Some pets don't like baths!
+  petStats.happiness = Math.max(0, petStats.happiness - 5)
   playSound('bath');
   saveStats();
   updateStatsDisplay();
@@ -178,17 +168,26 @@ function playSound(action) {
   audio.play();
 }
 
-// Shop functionality
 function openShop() {
-  const item = prompt('Buy an item:\n1. Toy (20 coins)\n2. Snack (10 coins)');
+  const item = prompt(
+    'Buy an item:\n1. Toy (20 coins)\n2. Snack (10 coins)\n3. Energy Drink (15 coins)\n4. Soap (5 coins)'
+  );
   if (item === '1' && petStats.coins >= 20) {
-    petStats.happiness = Math.min(100, petStats.happiness + 20);
+    addItemEffect('Toy', 5, 'happiness', 4);
     petStats.coins -= 20;
     alert('You bought a Toy!');
   } else if (item === '2' && petStats.coins >= 10) {
-    petStats.hunger = Math.max(0, petStats.hunger - 20);
+    addItemEffect('Snack', -5, 'hunger', 4);
     petStats.coins -= 10;
     alert('You bought a Snack!');
+  } else if (item === '3' && petStats.coins >= 15) {
+    addItemEffect('Energy Drink', 10, 'energy', 3);
+    petStats.coins -= 15;
+    alert('You bought an Energy Drink!');
+  } else if (item === '4' && petStats.coins >= 5) {
+    addItemEffect('Soap', 5, 'cleanliness', 2);
+    petStats.coins -= 5;
+    alert('You bought Soap!');
   } else {
     alert('Not enough coins or invalid choice.');
   }
@@ -196,7 +195,38 @@ function openShop() {
   updateStatsDisplay();
 }
 
-// Decrease stats over time
+function applyEffect(effect, intervalId) {
+  if (effect.remainingIntervals > 0) {
+    petStats[effect.stat] = Math.max(
+      0,
+      Math.min(100, petStats[effect.stat] + effect.value)
+    );
+    effect.remainingIntervals--;
+    saveStats();
+    updateStatsDisplay();
+  } else {
+    clearInterval(intervalId);
+    activeEffects = activeEffects.filter((e) => e !== effect);
+  }
+}
+
+function addItemEffect(name, value, stat, intervals) {
+  const effect = {
+    name,
+    value,
+    stat,
+    intervals,
+    remainingIntervals: intervals,
+  };
+
+  activeEffects.push(effect);
+
+  const intervalId = setInterval(() => {
+    applyEffect(effect, intervalId);
+  }, 5000);
+}
+
+
 function updatePetStats() {
   chrome.storage.sync.get(['petStats'], (result) => {
     let petStats = result.petStats || {
@@ -209,7 +239,6 @@ function updatePetStats() {
       stage: 1
     };
 
-    // Modify stats over time
     petStats.hunger = Math.min(100, petStats.hunger + 1);
     petStats.happiness = Math.max(0, petStats.happiness - 1);
     petStats.energy = Math.max(0, petStats.energy - 1);
@@ -225,13 +254,10 @@ function updatePetStats() {
       petStats.health = Math.max(0, petStats.health - 1);
     }
 
-    // Check for evolution
     checkEvolution();
 
-    // Save updated stats
     chrome.storage.sync.set({ petStats });
 
-    // Check if notification is needed
     let messages = [];
     if (petStats.hunger >= 80) messages.push('Your pet is very hungry!');
     if (petStats.health <= 20) messages.push('Your pet is not feeling well!');
@@ -266,7 +292,6 @@ function checkEvolution() {
 
 setInterval(updatePetStats, 30000);
 
-// Handle notification clicks
 chrome.notifications.onClicked.addListener(() => {
   chrome.action.openPopup();
 });

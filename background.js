@@ -1,4 +1,3 @@
-// Decrease stats over time
 
 function sanitizePetStats(petStats) {
   return {
@@ -25,10 +24,8 @@ function updatePetStats() {
       ...result.petStats
     };
 
-    // Sanitize petStats
     petStats = sanitizePetStats(petStats);
 
-    // Modify stats over time
     petStats.hunger = Math.min(100, petStats.hunger + 1);
     petStats.happiness = Math.max(0, petStats.happiness - 1);
     petStats.energy = Math.max(0, petStats.energy - 1);
@@ -44,13 +41,9 @@ function updatePetStats() {
       petStats.health = Math.max(0, petStats.health - 1);
     }
 
-    // Check for evolution
     checkEvolution(petStats);
 
-    // Save updated stats
     chrome.storage.sync.set({ petStats });
-
-    // Check if notification is needed
     let messages = [];
     if (petStats.hunger >= 80) messages.push('Your pet is very hungry!');
     if (petStats.health <= 20) messages.push('Your pet is not feeling well!');
@@ -83,9 +76,8 @@ function checkEvolution(petStats) {
   }
 }
 
-setInterval(updatePetStats, 3000);
+setInterval(updatePetStats, 30000);
 
-// Handle notification clicks
 chrome.notifications.onClicked.addListener(() => {
   chrome.action.openPopup();
 });

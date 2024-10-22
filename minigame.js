@@ -18,11 +18,10 @@ const timer = setInterval(() => {
 
 function endGame() {
   alert(`Time's up! Your score is ${score}.`);
-  // Update pet's happiness based on score
   chrome.storage.sync.get(['petStats'], (result) => {
     let petStats = result.petStats;
     petStats.happiness = Math.min(100, petStats.happiness + score);
-    petStats.coins += score; // Earn coins equal to score
+    petStats.coins += score;
     chrome.storage.sync.set({ petStats }, () => {
       window.close();
     });
