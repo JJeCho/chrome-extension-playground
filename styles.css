@@ -1,0 +1,39 @@
+body {
+  width: 300px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 10px;
+  background-color: #f0f8ff;
+}
+
+#pet-container {
+  margin: 20px auto;
+  position: relative;
+}
+
+#pet-image {
+  width: 150px;
+  height: 150px;
+  transition: transform 0.3s;
+}
+
+#pet-image:hover {
+  transform: scale(1.1);
+}
+
+#stats p {
+  margin: 5px;
+  font-size: 16px;
+}
+
+#actions button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#actions button:hover {
+  background-color: #add8e6;
+}
